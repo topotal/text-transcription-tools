@@ -13,7 +13,6 @@ const formatSegmentsData = (segments) => {
 
 // CLI引数をパース
 program.option("-f, --file <path>", "Path to MP3 file");
-program.option("-r, --request <text>", "ChatGPTへのリクエスト内容", "以下の文字列について要約をお願いします。");
 program.parse(process.argv);
 
 const options = program.opts();
