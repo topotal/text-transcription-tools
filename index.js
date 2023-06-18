@@ -15,7 +15,7 @@ const formatSegmentsData = (segments) => {
 
 // CLI引数をパース
 program.option("-f, --file <path>", "Path to MP3 file or MP4 file");
-// program.option("-o, --out <path>", "Path to output");
+program.option("-o, --out <path>", "Path to output");
 program.parse(process.argv);
 
 const options = program.opts();
@@ -41,28 +41,35 @@ const isMovieFile = (file) => {
 // 動画ファイルを音声ファイルに変換する関数
 const audioBitrate = '32k'
 const convertMovieToAudio = async (inputFilePath, outputFilePath) => {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     try {
       ffmpeg(inputFilePath)
         .audioBitrate(audioBitrate)
-        .on('end', () => {
-          const stats = fs.statSync(outputFilePath);
-          const fileSizeInBytes = stats.size;
-          const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
-          console.log(`音声ファイルのサイズ: ${fileSizeInMB.toFixed(2)} MB`);
-
-          resolve(outputFilePath)
-        })
+        .on('end', () => { resolve(outputFilePath) })
         .save(outputFilePath)
     } catch (error) {
-      console.error(error)
-      reject(error)
+      console.error(error instanceof Error ? error.message : "動画ファイルの変換に失敗しました")
+      process.exit(1);
     }
   })
 };
 
+// MBでファイルサイズを取得する関数
+const getFileSizeInMB = (filePath) => {
+  const stats = fs.statSync(filePath);
+  const fileSizeInBytes = stats.size;
+  const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+  return fileSizeInMB;
+}
+
 // MP3ファイルを文字起こしする関数
 const transcribe = async (file) => {
+  // ファイルサイズが 24MB 以上であればエラー
+  if (getFileSizeInMB(file) > 24) {
+    console.error("音声ファイルのサイズが大きすぎます。24MB以下のファイルを指定してください。");
+    process.exit(1);
+  }
+
   const form = new FormData();
   form.append("model", "whisper-1");
   form.append("file", fs.createReadStream(file));
@@ -91,18 +98,14 @@ const transcribe = async (file) => {
   // 動画ファイルの場合は音声ファイルに変換してから文字起こし
   else if (isMovieFile(options.file)) {
     const outputFileObj = tmp.fileSync({ postfix: '.mp3' });
-    try {
-      const audioFilePath = await convertMovieToAudio(options.file, outputFileObj.name);
-      const result = await transcribe(audioFilePath);
-      console.info(formatSegmentsData(result.segments))
-    } catch (error) {
-      console.error(error)
-      process.exit(1);
-    }
+    const audioFilePath = await convertMovieToAudio(options.file, outputFileObj.name);
+    const result = await transcribe(audioFilePath);
+    console.info(formatSegmentsData(result.segments))
+    process.exit(0);
   }
   // それ以外の場合はエラー
   else {
-    console.error("Invalid file");
+    console.error("ファイルの形式が不正です。mp3 または mp4 ファイルを指定してください。");
     process.exit(1);
   }
 })();
