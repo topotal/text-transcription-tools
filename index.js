@@ -84,7 +84,7 @@ const transcribe = async (file) => {
 (async () => {
   // 音声ファイルの場合はそのまま文字起こし
   if (isAudioFile(options.file)) {
-    const result = await transcribe(audioFilePath);
+    const result = await transcribe(options.file);
     console.info(formatSegmentsData(result.segments))
     process.exit(0);
   }
@@ -93,7 +93,6 @@ const transcribe = async (file) => {
     const outputFileObj = tmp.fileSync({ postfix: '.mp3' });
     try {
       const audioFilePath = await convertMovieToAudio(options.file, outputFileObj.name);
-      console.info(audioFilePath)
       const result = await transcribe(audioFilePath);
       console.info(formatSegmentsData(result.segments))
     } catch (error) {
