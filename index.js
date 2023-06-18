@@ -4,14 +4,12 @@ const fs = require("fs");
 const program = require("commander");
 const ffmpeg = require("fluent-ffmpeg");
 const tmp = require("tmp");
-
-const formatSegmentsData = (segments) => {
-  return segments.map((segment) => {
-    const startText = `${String(Math.floor(segment.start / 60)).padStart(2, "0")}:${String(Math.floor(segment.start % 60)).padStart(2, "0")}`
-    const endText = `${String(Math.floor(segment.end / 60)).padStart(2, "0")}:${String(Math.floor(segment.end % 60)).padStart(2, "0")}`
-    return `${startText}~${endText}\n${segment.text}`
-  }).join('\n\n')
-}
+const {
+  formatSegmentsData,
+  isAudioFile,
+  isMovieFile,
+  getFileSizeInMB,
+} = require("./utils");
 
 // CLI引数をパース
 program.option("-f, --file <path>", "Path to MP3 file or MP4 file");
@@ -30,14 +28,6 @@ if (!options.file) {
   process.exit(1);
 }
 
-const isAudioFile = (file) => {
-  return file.toLowerCase().endsWith(".mp3");
-};
-
-const isMovieFile = (file) => {
-  return file.toLowerCase().endsWith(".mp4");
-};
-
 // 動画ファイルを音声ファイルに変換する関数
 const audioBitrate = '32k'
 const convertMovieToAudio = async (inputFilePath, outputFilePath) => {
@@ -53,14 +43,6 @@ const convertMovieToAudio = async (inputFilePath, outputFilePath) => {
     }
   })
 };
-
-// MBでファイルサイズを取得する関数
-const getFileSizeInMB = (filePath) => {
-  const stats = fs.statSync(filePath);
-  const fileSizeInBytes = stats.size;
-  const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
-  return fileSizeInMB;
-}
 
 // MP3ファイルを文字起こしする関数
 const transcribe = async (file) => {
